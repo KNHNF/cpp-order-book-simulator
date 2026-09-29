@@ -1,23 +1,29 @@
 # C++ limit order book
 
-A single-instrument C++20 simulator for a continuous limit order book. It accepts limit and market orders, applies price-time priority, emits deterministic trades and supports cancellation of resting orders.
+A single-instrument C++20 simulator for a continuous limit order book. It accepts limit and market orders, applies price-time priority, emits deterministic trades and supports cancelling resting orders.
 
-The project makes one matching rule checkable: the best available price trades first and, at the same price, the oldest resting order trades first. It is a simulator, not a broker connection or an exchange implementation.
+The point is one checkable rule: the best price trades first and, at the same price, the oldest resting order trades first. It is a simulator. It is not a broker connection or an exchange implementation.
 
-## Built behaviour
+**There are no speed figures.** The matching code is a readable first version, and nothing here claims exchange-grade latency or throughput. A workload generator exists for a future benchmark, but no benchmark has been run.
 
-- Limit buys and sells, including unfilled remainders resting on the book.
-- Market buys and sells, with any unfilled market remainder discarded.
-- Partial fills at the passive order's price.
-- FIFO priority within each price level.
-- Cancellation by active order ID.
-- Read-only bid and ask depth views for test assertions.
+## What it does
 
-The implementation uses ascending asks, descending bids, FIFO lists within each price level and an order-ID lookup for cancellation. This makes the price-time rule explicit. It is a readable first implementation, not a claim about exchange-grade latency or throughput.
+- Limit buys and sells, with any unfilled remainder resting on the book.
+- Market buys and sells, with any unfilled remainder discarded.
+- Partial fills at the resting order's price.
+- First in, first out within each price level.
+- Cancellation by order ID.
+- Read-only bid and ask depth views, used by the tests.
 
-## Test coverage
+Asks are kept ascending, bids descending, each price level is a FIFO list, and a lookup by order ID makes cancellation direct.
 
-The executable test suite covers the 12 acceptance scenarios in the written specification: resting orders, passive-price execution, partial fills, market-order level walking, market remainders, price priority, FIFO, cancellation, price protection and invalid lifecycle actions. It also covers the symmetric sell-side path.
+## Tests
+
+Three test executables, each registered with CTest:
+
+- `order_book_contract_tests`: the written acceptance scenarios (resting orders, passive-price execution, partial fills, walking price levels with a market order, price priority, FIFO, cancellation, invalid actions) plus the sell-side mirror.
+- `order_book_invariant_tests`: randomised sequences checked against book invariants.
+- `workload_contract_tests`: checks the seeded workload generator (balanced, cancel-heavy and sweep mixes) gives the same events for the same seed.
 
 ## Build and test
 
@@ -29,20 +35,24 @@ cmake --build build --config Debug
 ctest --test-dir build -C Debug --output-on-failure
 ```
 
-On 16 September 2026, the Debug build passed 1 CTest target containing 13 matching scenarios with MSVC 19.51 and CMake 4.3.1.
+On 16 September 2026 the Debug build passed the contract tests (13 scenarios) with MSVC 19.51 and CMake 4.3.1. The invariant and workload tests were added after that run, and I have not re-run all three since.
 
-## Structure
+## Files
 
 - `include/order_book/types.hpp`: order requests, trades and depth views.
 - `include/order_book/order_book.hpp`: matching, resting-book storage and cancellation lookup.
-- `tests/order_book_contract_tests.cpp`: deterministic acceptance tests.
-- `docs/design.md`: data-structure and price-time-priority contract.
+- `benchmarks/workload.hpp`: seeded event generator for a future benchmark.
+- `tests/`: the three test executables above.
+- `docs/design.md`: the data-structure choices and the price-time rule.
 
 ## Not included
 
-- Multiple instruments, amendments, stop or iceberg orders, auctions, self-trade prevention, fees, risk checks, persistence, networking or concurrent matching.
-- Benchmarks. No latency or throughput figure is claimed until a benchmark method and measured results exist.
+Multiple instruments, order amendments, stop or iceberg orders, auctions, self-trade prevention, fees, risk checks, persistence, networking and concurrent matching.
+
+## Next
+
+A benchmark that reports hardware, compiler flags, event mix, book depth and the measured numbers. Until then no performance claim is made.
 
 ## Status
 
-The matching engine and acceptance tests are implemented. C++ cold-practice evidence remains separate. A future benchmark must report the hardware, compiler flags, event mix, book depth and measured results.
+Matching engine and tests are implemented. This was built with AI assistance (Codex), and I am treating it as a worked example to study and extend, not as proof I can write a matching engine unaided. My own from-memory C++ practice is kept in a separate repo.
