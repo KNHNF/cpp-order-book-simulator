@@ -35,7 +35,7 @@ cmake --build build --config Debug
 ctest --test-dir build -C Debug --output-on-failure
 ```
 
-On 16 September 2026 the Debug build passed the contract tests (13 scenarios) with MSVC 19.51 and CMake 4.3.1. The invariant and workload tests were added after that run, and I have not re-run all three since.
+On 29 September 2026 the Debug build passed all three test executables (contract, invariant and workload), 3 of 3 in CTest, from a Visual Studio 2026 Developer PowerShell (version 18.10). On 16 September the contract tests passed with MSVC 19.51 and CMake 4.3.1, before the other two were added.
 
 ## Files
 
