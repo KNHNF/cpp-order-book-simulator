@@ -1,0 +1,24 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(cpp_order_book_simulator LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+add_library(order_book INTERFACE)
+target_include_directories(order_book INTERFACE include)
+
+add_executable(order_book_contract_tests tests/order_book_contract_tests.cpp)
+target_link_libraries(order_book_contract_tests PRIVATE order_book)
+
+add_executable(order_book_invariant_tests tests/order_book_invariant_tests.cpp)
+target_link_libraries(order_book_invariant_tests PRIVATE order_book)
+
+add_executable(workload_contract_tests tests/workload_contract_tests.cpp)
+target_link_libraries(workload_contract_tests PRIVATE order_book)
+
+enable_testing()
+add_test(NAME order_book_contract_tests COMMAND order_book_contract_tests)
+add_test(NAME order_book_invariant_tests COMMAND order_book_invariant_tests)
+add_test(NAME workload_contract_tests COMMAND workload_contract_tests)
