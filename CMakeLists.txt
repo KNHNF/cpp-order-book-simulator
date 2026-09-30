@@ -18,6 +18,9 @@ target_link_libraries(order_book_invariant_tests PRIVATE order_book)
 add_executable(workload_contract_tests tests/workload_contract_tests.cpp)
 target_link_libraries(workload_contract_tests PRIVATE order_book)
 
+add_executable(order_book_benchmark benchmarks/order_book_benchmark.cpp)
+target_link_libraries(order_book_benchmark PRIVATE order_book)
+
 enable_testing()
 add_test(NAME order_book_contract_tests COMMAND order_book_contract_tests)
 add_test(NAME order_book_invariant_tests COMMAND order_book_invariant_tests)
