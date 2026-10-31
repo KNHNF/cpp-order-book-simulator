@@ -19,15 +19,26 @@ Asks are kept ascending, bids descending, each price level is a FIFO list, and a
 
 ## Tests
 
-Three test executables, each registered with CTest:
+Four test executables, each registered with CTest:
 
 - `order_book_contract_tests`: the written acceptance scenarios (resting orders, passive-price execution, partial fills, walking price levels with a market order, price priority, FIFO, cancellation, invalid actions) plus the sell-side mirror.
 - `order_book_invariant_tests`: randomised sequences checked against book invariants.
+- `matching_rules_tests`: price-time priority on both sides (queue position, no queue jumping, cancel and resubmit goes to the back, inclusive and exclusive price boundaries, execution at the passive price), rejected orders leaving the book unchanged, and a comparison against a deliberately naive reference implementation over seeded random sequences.
 - `workload_contract_tests`: checks the seeded workload generator (balanced, cancel-heavy and sweep mixes) gives the same events for the same seed.
 
 ## Build and test
 
-From a Visual Studio Developer PowerShell:
+Needs a C++20 compiler and CMake 3.20 or newer. No other dependencies.
+
+Linux or macOS (checked with g++ 13.3 and CMake 3.28 on Linux only):
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build -C Release --output-on-failure
+```
+
+Windows, from a Visual Studio Developer PowerShell:
 
 ```powershell
 cmake -S . -B build
@@ -35,7 +46,17 @@ cmake --build build --config Debug
 ctest --test-dir build -C Debug --output-on-failure
 ```
 
-On 29 September 2026 the Debug build passed all three test executables (contract, invariant and workload), 3 of 3 in CTest, from a Visual Studio 2026 Developer PowerShell (version 18.10). On 16 September the contract tests passed with MSVC 19.51 and CMake 4.3.1, before the other two were added.
+On 29 September 2026 the Debug build passed the three test executables that existed then (contract, invariant and workload), 3 of 3 in CTest, from a Visual Studio 2026 Developer PowerShell (version 18.10). On 16 September the contract tests passed with MSVC 19.51 and CMake 4.3.1, before the other two were added.
+
+## Runnable example
+
+`order_book_demo` runs offline with no input. It rests three sells, crosses them with a limit buy and then a market buy, and prints the trades and depth after each step. Prices are illustrative integer ticks, not market data.
+
+```bash
+./build/order_book_demo
+```
+
+On Windows the executable is under `build\Debug` or `build\Release`.
 
 ## Benchmark
 
@@ -53,11 +74,20 @@ Measured on 30 September 2026 with MSVC 19.51 Release flags (`/O2 /Ob2 /DNDEBUG`
 
 - `include/order_book/types.hpp`: order requests, trades and depth views.
 - `include/order_book/order_book.hpp`: matching, resting-book storage and cancellation lookup.
-- `benchmarks/workload.hpp`: seeded event generator for a future benchmark.
+- `benchmarks/workload.hpp`: seeded event generator used by the benchmark and its test.
+- `examples/demo.cpp`: the runnable example above.
 - `benchmarks/order_book_benchmark.cpp`: timed replay of the seeded workloads.
 - `benchmarks/RESULTS.md`: recorded environment, method and measured median results.
-- `tests/`: the three test executables above.
+- `tests/`: the test executables above.
 - `docs/design.md`: the data-structure choices and the price-time rule.
+
+## Limits
+
+- Not thread safe. One thread owns a book.
+- Prices and quantities are plain integers. An order is rejected if resting it would overflow the quantity total at its price level.
+- Errors are `std::invalid_argument` exceptions: order ID 0, non-positive quantity, non-positive limit price, an ID that is already active, or the overflow case.
+- `OrderRequest` is not checked for out-of-range `Side` or `OrderType` values, which are only possible through a cast.
+- The timestamps used for priority are an internal arrival counter, not wall-clock time.
 
 ## Not included
 
@@ -65,4 +95,4 @@ Multiple instruments, order amendments, stop or iceberg orders, auctions, self-t
 
 ## Status
 
-Matching engine, tests and a repeatable local benchmark are implemented. GitHub Actions builds the Release configuration and runs the three CTest targets. This was built with AI assistance (Codex), and I am treating it as a worked example to study and extend, not as proof I can write a matching engine unaided. My own from-memory C++ practice is kept in a separate repo.
+Matching engine, tests and a repeatable local benchmark are implemented. GitHub Actions builds the Release configuration and runs the CTest targets on Windows and Ubuntu. This was built with AI assistance (Codex), and I am treating it as a worked example to study and extend, not as proof I can write a matching engine unaided. My own from-memory C++ practice is kept in a separate repo.

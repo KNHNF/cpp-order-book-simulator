@@ -21,3 +21,16 @@ cmake -S . -B build -G "Visual Studio 18 2026" -A x64
 cmake --build build --config Release
 .\build\Release\order_book_benchmark.exe
 ```
+
+## Method note for reproducing or extending this benchmark
+
+This note describes the method only. It contains no measurements. Anything you record should come from your own machine.
+
+- Build in Release. Debug and sanitizer builds are not comparable.
+- Record, next to any number: compiler and version, flags, CPU model, OS, power mode, and the date. Close other heavy programs and keep the laptop on mains power.
+- The workload is generated once from a fixed seed and replayed from memory, so generation cost and random-number cost are excluded. The first replay is a warm-up and is discarded.
+- Report the median of several replays, and keep the individual samples if you want to show spread. The executable prints only the median and a checksum, so add the samples to the output before quoting a range.
+- The checksum must match between runs on the same compiler and seed. A different checksum means the matching behaviour changed, and the timings are then not comparable.
+- Synthetic prices cluster within 5 ticks of a reference price, so books stay shallow and crossing is frequent. Results will differ for deeper or sparser books.
+- Timings of `std::map` and `std::list` based books are dominated by allocation and cache behaviour, which vary a lot between machines. Do not compare numbers across machines.
+- Not measured: per-order latency or its tail, memory use, multi-threading, I/O.

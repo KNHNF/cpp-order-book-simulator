@@ -3,10 +3,12 @@
 #include "order_book/types.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <list>
 #include <map>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -18,8 +20,10 @@ public:
     std::vector<Trade> submit(const OrderRequest& request) {
         validate(request);
         if (active_orders_.contains(request.id)) {
-            throw std::invalid_argument("order ID is already active");
+            throw std::invalid_argument("order ID " + std::to_string(request.id) + " is already active");
         }
+
+        check_level_capacity(request);
 
         Quantity remaining = request.quantity;
         std::vector<Trade> trades;
@@ -119,10 +123,31 @@ private:
             throw std::invalid_argument("order ID must be positive");
         }
         if (request.quantity <= 0) {
-            throw std::invalid_argument("order quantity must be positive");
+            throw std::invalid_argument("order " + std::to_string(request.id) + ": quantity must be positive, got " +
+                                        std::to_string(request.quantity));
         }
         if (request.type == OrderType::Limit && request.price_ticks <= 0) {
-            throw std::invalid_argument("limit price must be positive");
+            throw std::invalid_argument("order " + std::to_string(request.id) + ": limit price must be positive, got " +
+                                        std::to_string(request.price_ticks));
+        }
+    }
+
+    // Rejects, before any state changes, a limit order whose resting quantity could overflow the level total.
+    void check_level_capacity(const OrderRequest& request) const {
+        if (request.type != OrderType::Limit) {
+            return;
+        }
+        Quantity existing = 0;
+        if (request.side == Side::Buy) {
+            const auto it = bids_.find(request.price_ticks);
+            existing = it == bids_.end() ? 0 : it->second.total_quantity;
+        } else {
+            const auto it = asks_.find(request.price_ticks);
+            existing = it == asks_.end() ? 0 : it->second.total_quantity;
+        }
+        if (existing > std::numeric_limits<Quantity>::max() - request.quantity) {
+            throw std::invalid_argument("order " + std::to_string(request.id) +
+                                        ": quantity would overflow the total at this price level");
         }
     }
 
